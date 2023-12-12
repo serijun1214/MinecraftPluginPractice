@@ -3,6 +3,7 @@ package plugin.command;
 import java.util.List;
 import java.util.SplittableRandom;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -10,6 +11,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Enemy;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 
 public class EnemyDownCommand implements CommandExecutor {
 
@@ -18,12 +21,28 @@ public class EnemyDownCommand implements CommandExecutor {
     if(sender instanceof Player player) {
       World world = player.getWorld();
 
-      player.setHealth(20);
-      player.setFoodLevel(20);
+      initPlayerStatus(player);
 
       world.spawnEntity(getEnemySpawnLocation(player, world), getEnemy());
     }
     return false;
+  }
+
+  /**
+   * ゲームを始める前にプレイヤーの状態を設定する。
+   * 体力と空腹度を最大にして、装備はネザライト一式になる。
+   *
+   * @param player コマンドを実行したプレイヤー
+   */
+  private static void initPlayerStatus(Player player) {
+    player.setHealth(20);
+    player.setFoodLevel(20);
+    PlayerInventory inventory = player.getInventory();
+    inventory.setHelmet(new ItemStack(Material.NETHERITE_HELMET));
+    inventory.setChestplate(new ItemStack(Material.NETHERITE_CHESTPLATE));
+    inventory.setLeggings(new ItemStack(Material.NETHERITE_LEGGINGS));
+    inventory.setBoots(new ItemStack(Material.NETHERITE_BOOTS));
+    inventory.setItemInMainHand(new ItemStack(Material.NETHERITE_SWORD));
   }
 
   /**
