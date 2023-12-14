@@ -5,8 +5,10 @@ import java.util.List;
 import java.util.Objects;
 import java.util.SplittableRandom;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -29,6 +31,10 @@ import plugin.data.PlayerScore;
 public class EnemyDownCommand extends BaseCommand implements Listener {
 
   public static final int GAME_TIME = 20;
+  public static final String EASY = "easy";
+  public static final String NORMAL = "normal";
+  public static final String HARD = "hard";
+  public static final String NONE = "none";
   private Main main;
   private List<PlayerScore> playerScoreList = new ArrayList<>();
   private List<Entity> spawnEntityList = new ArrayList<>();
@@ -38,17 +44,36 @@ public class EnemyDownCommand extends BaseCommand implements Listener {
   }
 
   @Override
-  public boolean onExecutePlayerCommand(Player player) {
+  public boolean onExecutePlayerCommand(Player player, Command command, String label, String[] args) {
+    String difficulty = getDifficulty(player, args);
+    if (difficulty.equals(NONE)) {
+      return false;
+    }
+
     PlayerScore nowPlayerScore = getPlayerScore(player);
 
     initPlayerStatus(player);
 
-    gamePlay(player, nowPlayerScore);
+    gamePlay(player, nowPlayerScore, difficulty);
     return true;
   }
 
+  /**
+   * 難易度をコマンド引数から取得します。
+   * @param player コマンドを実行したプレイヤー
+   * @param args コマンド引数
+   * @return 難易度
+   */
+  private static String getDifficulty(Player player, String[] args) {
+    if (args.length == 1 && (EASY.equals(args[0]) || NORMAL.equals(args[0]) || HARD.equals(args[0]))) {
+      return args[0];
+    }
+    player.sendMessage(ChatColor.RED + "実行できません。コマンド引数の1つ目に難易度指定が必要です。[easy, normal, hard]");
+    return NONE;
+  }
+
   @Override
-  public boolean onExecuteNPCCommand(CommandSender sender) {
+  public boolean onExecuteNPCCommand(CommandSender sender, Command command, String label, String[] args) {
     return false;
   }
 
@@ -134,8 +159,9 @@ public class EnemyDownCommand extends BaseCommand implements Listener {
    *
    * @param player コマンドを実行したプレイヤー
    * @param nowPlayerScore プレイヤースコア情報
+   * @param difficulty 難易度
    */
-  private void gamePlay(Player player, PlayerScore nowPlayerScore) {
+  private void gamePlay(Player player, PlayerScore nowPlayerScore, String difficulty) {
     Bukkit.getScheduler().runTaskTimer(main,Runnable -> {
       if(nowPlayerScore.getGameTime() <= 0) {
         Runnable.cancel();
@@ -150,7 +176,7 @@ public class EnemyDownCommand extends BaseCommand implements Listener {
         removePotionEffect(player);
         return;
       }
-      Entity spawnEntity = player.getWorld().spawnEntity(getEnemySpawnLocation(player), getEnemy());
+      Entity spawnEntity = player.getWorld().spawnEntity(getEnemySpawnLocation(player), getEnemy(difficulty));
       spawnEntityList.add(spawnEntity);
       nowPlayerScore.setGameTime(nowPlayerScore.getGameTime() - 5);
     }, 0, 5 * 20);
@@ -180,10 +206,16 @@ public class EnemyDownCommand extends BaseCommand implements Listener {
   /**
    * ランダムで敵を抽選して、その結果の敵を取得します。
    *
+   * @param difficulty 難易度
    * @return 敵
    */
-  private EntityType getEnemy() {
-    List<EntityType> enemyList = List.of(EntityType.ZOMBIE, EntityType.SKELETON, EntityType.WITCH);
+  private EntityType getEnemy(String difficulty) {
+    List<EntityType> enemyList = switch (difficulty) {
+      case NORMAL -> List.of(EntityType.ZOMBIE, EntityType.SKELETON);
+      case HARD -> List.of(EntityType.ZOMBIE, EntityType.SKELETON, EntityType.WITCH);
+      default -> List.of(EntityType.ZOMBIE);
+    };
+
     return enemyList.get(new SplittableRandom().nextInt(enemyList.size()));
   }
 
